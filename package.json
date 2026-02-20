@@ -1,0 +1,13 @@
+{
+  "name": "neurocal-stress-detector-v2",
+  "version": "2.0.0",
+  "description": "Advanced real-time facial AI stress detector — emotion detection, breathing guide, audio alerts, session export, head pose estimation",
+  "scripts": {
+    "setup": "node setup.js",
+    "start": "npx serve . -p 3000 --no-clipboard",
+    "dev": "npx live-server --port=3000 --open=/"
+  },
+  "keywords": ["stress-detection", "face-api", "tensorflow", "emotion-ai", "webcam-ai", "breathing-guide"],
+  "license": "MIT",
+  "engines": { "node": ">=16.0.0" }
+}

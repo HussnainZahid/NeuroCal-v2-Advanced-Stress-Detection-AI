@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NeuroCal v2 — Advanced Stress Detection AI</title>
+  <link rel="stylesheet" href="src/styles/main.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Ambient background -->
+<div class="bg-grid"></div>
+<div class="bg-glow" id="bgGlow"></div>
+<div class="scanlines"></div>
+
+<div class="app-wrapper">
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-pulse"></div>
+      <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M6 16 Q9 9 12 16 Q15 23 18 16 Q21 9 26 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+      </svg>
+      <span class="logo-text">NeuroCal</span>
+      <span class="version-tag">v2.0</span>
+    </div>
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="dashboard">DASHBOARD</button>
+      <button class="tab-btn" data-tab="analytics">ANALYTICS</button>
+      <button class="tab-btn" data-tab="sessions">SESSIONS</button>
+      <button class="tab-btn" data-tab="settings">SETTINGS</button>
+    </nav>
+    <div class="header-right">
+      <div class="alert-bell" id="alertBell" title="Alerts">
+        <svg viewBox="0 0 20 20" fill="none">
+          <path d="M10 2a6 6 0 00-6 6v3l-2 2v1h16v-1l-2-2V8a6 6 0 00-6-6z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M8 17a2 2 0 004 0" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        <span class="alert-badge" id="alertBadge" style="display:none">0</span>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusLabel">OFFLINE</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ TAB: DASHBOARD ═══ -->
+  <div class="tab-content active" id="tab-dashboard">
+    <div class="dashboard-grid">
+
+      <!-- Camera Panel -->
+      <section class="panel camera-panel" id="cameraPanel">
+        <div class="panel-header">
+          <span class="panel-label">LIVE FEED</span>
+          <div class="panel-controls">
+            <button class="icon-btn" id="mirrorBtn" title="Mirror camera">⇄</button>
+            <button class="icon-btn" id="snapshotBtn" title="Screenshot" disabled>📷</button>
+            <button class="icon-btn" id="stopBtn" title="Stop camera" disabled>⏹</button>
+          </div>
+        </div>
+        <div class="camera-wrap" id="cameraWrap">
+          <video id="videoEl" autoplay muted playsinline></video>
+          <canvas id="overlayCanvas"></canvas>
+
+          <!-- Breathing Guide Overlay -->
+          <div class="breathing-overlay" id="breathingOverlay" style="display:none">
+            <div class="breathing-ring" id="breathingRing">
+              <svg viewBox="0 0 120 120" class="breathing-svg">
+                <circle cx="60" cy="60" r="50" stroke="#ffffff22" stroke-width="2" fill="none"/>
+                <circle cx="60" cy="60" r="50" stroke="#00e5ff" stroke-width="2" fill="none"
+                  stroke-dasharray="314" stroke-dashoffset="314"
+                  id="breathingCircle" stroke-linecap="round"/>
+              </svg>
+              <div class="breathing-text" id="breathingText">INHALE</div>
+              <div class="breathing-count" id="breathingCount">4</div>
+            </div>
+          </div>
+
+          <!-- Start Overlay -->
+          <div class="camera-overlay" id="cameraOverlay">
+            <div class="start-card">
+              <div class="start-icon">
+                <svg viewBox="0 0 64 64" fill="none">
+                  <circle cx="32" cy="32" r="28" stroke="#00e5ff" stroke-width="1.5" opacity="0.4"/>
+                  <circle cx="32" cy="32" r="20" stroke="#00e5ff" stroke-width="1.5" opacity="0.6"/>
+                  <circle cx="32" cy="32" r="5" fill="#00e5ff"/>
+                </svg>
+              </div>
+              <h2>Stress Detection AI</h2>
+              <p>8 biometric signals · Real-time analysis · 100% private</p>
+              <button class="btn-primary" id="startBtn">
+                <span>ACTIVATE CAMERA</span>
+              </button>
+              <div class="start-note">Camera stays on your device — no data transmitted</div>
+            </div>
+          </div>
+
+          <!-- Corner brackets -->
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="corner bl"></div><div class="corner br"></div>
+          <div class="scan-line" id="scanLine"></div>
+        </div>
+
+        <!-- Camera info bar -->
+        <div class="camera-bar">
+          <span id="fpsDisplay">— FPS</span>
+          <span id="faceCount">NO FACE</span>
+          <span id="modelReady">LOADING...</span>
+          <span id="sessionTimer">00:00:00</span>
+        </div>
+      </section>
+
+      <!-- Right column -->
+      <div class="right-col">
+
+        <!-- Stress Meter -->
+        <section class="panel stress-panel">
+          <div class="panel-header">
+            <span class="panel-label">STRESS INDEX</span>
+            <span class="stress-avg-label">AVG <span id="avgStress">--</span></span>
+          </div>
+          <div class="stress-row">
+            <div class="gauge-wrap">
+              <canvas id="gaugeCanvas" width="190" height="110"></canvas>
+              <div class="gauge-center">
+                <div class="stress-num" id="stressNum">--</div>
+                <div class="stress-denom">/100</div>
+              </div>
+            </div>
+            <div class="stress-right">
+              <div class="level-badge" id="levelBadge"><span id="levelText">WAITING</span></div>
+              <div class="stress-mini-stats">
+                <div class="mini-stat"><span class="msl">PEAK</span><span class="msv" id="peakStress">--</span></div>
+                <div class="mini-stat"><span class="msl">MIN</span><span class="msv" id="minStress">--</span></div>
+                <div class="mini-stat"><span class="msl">ALERTS</span><span class="msv" id="alertCount">0</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="history-wrap">
+            <div class="history-label">60s HISTORY</div>
+            <canvas id="historyChart" height="52"></canvas>
+          </div>
+        </section>
+
+        <!-- Emotion Panel -->
+        <section class="panel emotion-panel">
+          <div class="panel-label">EMOTION DETECTION</div>
+          <div class="emotion-grid" id="emotionGrid">
+            <div class="emotion-bar-row" data-emotion="neutral">
+              <span class="emo-icon">😐</span>
+              <span class="emo-label">NEUTRAL</span>
+              <div class="emo-track"><div class="emo-fill" id="emo-neutral"></div></div>
+              <span class="emo-pct" id="epct-neutral">--</span>
+            </div>
+            <div class="emotion-bar-row" data-emotion="happy">
+              <span class="emo-icon">😊</span>
+              <span class="emo-label">HAPPY</span>
+              <div class="emo-track"><div class="emo-fill" id="emo-happy"></div></div>
+              <span class="emo-pct" id="epct-happy">--</span>
+            </div>
+            <div class="emotion-bar-row" data-emotion="sad">
+              <span class="emo-icon">😢</span>
+              <span class="emo-label">SAD</span>
+              <div class="emo-track"><div class="emo-fill" id="emo-sad"></div></div>
+              <span class="emo-pct" id="epct-sad">--</span>
+            </div>
+            <div class="emotion-bar-row" data-emotion="angry">
+              <span class="emo-icon">😠</span>
+              <span class="emo-label">ANGRY</span>
+              <div class="emo-track"><div class="emo-fill" id="emo-angry"></div></div>
+              <span class="emo-pct" id="epct-angry">--</span>
+            </div>
+            <div class="emotion-bar-row" data-emotion="fearful">
+              <span class="emo-icon">😨</span>
+              <span class="emo-label">FEARFUL</span>
+              <div class="emo-track"><div class="emo-fill" id="emo-fearful"></div></div>
+              <span class="emo-pct" id="epct-fearful">--</span>
+            </div>
+            <div class="emotion-bar-row" data-emotion="surprised">
+              <span class="emo-icon">😲</span>
+              <span class="emo-label">SURPRISED</span>
+              <div class="emo-track"><div class="emo-fill" id="emo-surprised"></div></div>
+              <span class="emo-pct" id="epct-surprised">--</span>
+            </div>
+            <div class="emotion-bar-row" data-emotion="disgusted">
+              <span class="emo-icon">🤢</span>
+              <span class="emo-label">DISGUSTED</span>
+              <div class="emo-track"><div class="emo-fill" id="emo-disgusted"></div></div>
+              <span class="emo-pct" id="epct-disgusted">--</span>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /right-col -->
+    </div><!-- /dashboard-grid -->
+
+    <!-- Bottom row -->
+    <div class="bottom-row">
+
+      <!-- Biometrics -->
+      <section class="panel bio-panel">
+        <div class="panel-header">
+          <span class="panel-label">FACIAL BIOMETRICS</span>
+        </div>
+        <div class="bio-grid">
+          <div class="bio-card" id="bc-eye">
+            <div class="bio-icon">👁</div>
+            <div class="bio-body">
+              <div class="bio-name">EYE OPENNESS</div>
+              <div class="bio-val" id="bv-eye">—</div>
+              <div class="bio-track"><div class="bio-fill" id="bf-eye"></div></div>
+            </div>
+          </div>
+          <div class="bio-card" id="bc-brow">
+            <div class="bio-icon">〰</div>
+            <div class="bio-body">
+              <div class="bio-name">BROW TENSION</div>
+              <div class="bio-val" id="bv-brow">—</div>
+              <div class="bio-track"><div class="bio-fill" id="bf-brow"></div></div>
+            </div>
+          </div>
+          <div class="bio-card" id="bc-mouth">
+            <div class="bio-icon">◯</div>
+            <div class="bio-body">
+              <div class="bio-name">MOUTH TENSION</div>
+              <div class="bio-val" id="bv-mouth">—</div>
+              <div class="bio-track"><div class="bio-fill" id="bf-mouth"></div></div>
+            </div>
+          </div>
+          <div class="bio-card" id="bc-blink">
+            <div class="bio-icon">✦</div>
+            <div class="bio-body">
+              <div class="bio-name">BLINK RATE</div>
+              <div class="bio-val" id="bv-blink">—</div>
+              <div class="bio-track"><div class="bio-fill" id="bf-blink"></div></div>
+            </div>
+          </div>
+          <div class="bio-card" id="bc-sym">
+            <div class="bio-icon">⚖</div>
+            <div class="bio-body">
+              <div class="bio-name">SYMMETRY</div>
+              <div class="bio-val" id="bv-sym">—</div>
+              <div class="bio-track"><div class="bio-fill" id="bf-sym"></div></div>
+            </div>
+          </div>
+          <div class="bio-card" id="bc-head">
+            <div class="bio-icon">↔</div>
+            <div class="bio-body">
+              <div class="bio-name">HEAD MOVEMENT</div>
+              <div class="bio-val" id="bv-head">—</div>
+              <div class="bio-track"><div class="bio-fill" id="bf-head"></div></div>
+            </div>
+          </div>
+          <div class="bio-card" id="bc-focus">
+            <div class="bio-icon">🎯</div>
+            <div class="bio-body">
+              <div class="bio-name">FOCUS SCORE</div>
+              <div class="bio-val" id="bv-focus">—</div>
+              <div class="bio-track"><div class="bio-fill" id="bf-focus"></div></div>
+            </div>
+          </div>
+          <div class="bio-card" id="bc-pose">
+            <div class="bio-icon">🧭</div>
+            <div class="bio-body">
+              <div class="bio-name">HEAD POSE</div>
+              <div class="bio-val" id="bv-pose">—</div>
+              <div class="bio-track"><div class="bio-fill" id="bf-pose"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Head Pose Panel -->
+      <section class="panel pose-panel">
+        <div class="panel-label">HEAD POSE (3D)</div>
+        <canvas id="poseCanvas" width="160" height="160"></canvas>
+        <div class="pose-vals">
+          <div class="pose-row"><span class="pose-axis x">PITCH</span><span id="pitchVal">0°</span></div>
+          <div class="pose-row"><span class="pose-axis y">YAW</span><span id="yawVal">0°</span></div>
+          <div class="pose-row"><span class="pose-axis z">ROLL</span><span id="rollVal">0°</span></div>
+        </div>
+      </section>
+
+      <!-- Breathing Guide Panel -->
+      <section class="panel breathe-panel">
+        <div class="panel-header">
+          <span class="panel-label">BREATHING GUIDE</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="breathingToggle">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="breathe-selector">
+          <button class="breathe-btn active" data-pattern="4-4-4-4">BOX (4-4-4-4)</button>
+          <button class="breathe-btn" data-pattern="4-7-8">4-7-8</button>
+          <button class="breathe-btn" data-pattern="6-2-6">CALM (6-2-6)</button>
+        </div>
+        <div class="breathe-info" id="breatheInfo">
+          <p>Activates automatically when stress exceeds threshold</p>
+          <p class="breathe-threshold">Trigger: stress &gt; <span id="breatheThreshVal">70</span></p>
+        </div>
+        <div class="breathe-phase" id="breathePhase">—</div>
+      </section>
+
+      <!-- Log Panel -->
+      <section class="panel log-panel">
+        <div class="panel-header">
+          <span class="panel-label">ANALYSIS LOG</span>
+          <button class="icon-btn" id="clearLogBtn">CLEAR</button>
+        </div>
+        <div class="log-stream" id="logStream">
+          <div class="log-entry sys">[ SYS ] NeuroCal v2 — Advanced Stress Detection Engine</div>
+          <div class="log-entry sys">[ SYS ] Loading TensorFlow.js models...</div>
+        </div>
+      </section>
+
+    </div><!-- /bottom-row -->
+  </div><!-- /tab-dashboard -->
+
+  <!-- ═══ TAB: ANALYTICS ═══ -->
+  <div class="tab-content" id="tab-analytics">
+    <div class="analytics-grid">
+      <section class="panel full-width">
+        <div class="panel-header">
+          <span class="panel-label">SESSION STRESS TIMELINE</span>
+          <div class="chart-legend">
+            <span class="legend-dot" style="background:#00e5ff"></span>Stress
+            <span class="legend-dot" style="background:#00ff88; margin-left:12px"></span>Focus
+          </div>
+        </div>
+        <canvas id="timelineChart" height="140"></canvas>
+      </section>
+
+      <section class="panel">
+        <div class="panel-label">EMOTION DISTRIBUTION</div>
+        <canvas id="emotionPieChart" width="200" height="200"></canvas>
+        <div id="pieLegend" class="pie-legend"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-label">STRESS DISTRIBUTION</div>
+        <canvas id="distChart" width="280" height="200"></canvas>
+      </section>
+
+      <section class="panel">
+        <div class="panel-label">SESSION SUMMARY</div>
+        <div class="summary-stats" id="summaryStats">
+          <div class="sum-row"><span>Duration</span><span id="sumDuration">--</span></div>
+          <div class="sum-row"><span>Avg Stress</span><span id="sumAvg">--</span></div>
+          <div class="sum-row"><span>Peak Stress</span><span id="sumPeak">--</span></div>
+          <div class="sum-row"><span>Time Calm</span><span id="sumCalm">--</span></div>
+          <div class="sum-row"><span>Time High</span><span id="sumHigh">--</span></div>
+          <div class="sum-row"><span>Stress Alerts</span><span id="sumAlerts">--</span></div>
+          <div class="sum-row"><span>Dominant Emotion</span><span id="sumEmotion">--</span></div>
+          <div class="sum-row"><span>Avg Blink Rate</span><span id="sumBlink">--</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: SESSIONS ═══ -->
+  <div class="tab-content" id="tab-sessions">
+    <section class="panel full-width">
+      <div class="panel-header">
+        <span class="panel-label">RECORDED SESSIONS</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary" id="exportCsvBtn">⬇ EXPORT CSV</button>
+          <button class="btn-secondary" id="exportJsonBtn">⬇ EXPORT JSON</button>
+          <button class="btn-danger" id="clearSessionsBtn">🗑 CLEAR ALL</button>
+        </div>
+      </div>
+      <div class="sessions-list" id="sessionsList">
+        <div class="no-sessions">No sessions recorded yet. Start a detection session to begin recording.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══ TAB: SETTINGS ═══ -->
+  <div class="tab-content" id="tab-settings">
+    <div class="settings-grid">
+
+      <section class="panel">
+        <div class="panel-label">AUDIO ALERTS</div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Enable Sound Alerts</div><div class="setting-desc">Play audio when stress is high</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="soundToggle" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Alert Threshold</div><div class="setting-desc">Stress level to trigger alert</div></div>
+          <div class="slider-wrap">
+            <input type="range" id="alertThreshold" min="40" max="90" value="70" class="slider">
+            <span id="alertThreshVal">70</span>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Alert Tone</div><div class="setting-desc">Sound style for alerts</div></div>
+          <select id="alertTone" class="select-input">
+            <option value="beep">Beep</option>
+            <option value="pulse">Pulse</option>
+            <option value="chime">Chime</option>
+          </select>
+        </div>
+        <button class="btn-secondary" id="testSoundBtn" style="margin-top:8px">▶ TEST SOUND</button>
+      </section>
+
+      <section class="panel">
+        <div class="panel-label">DETECTION SETTINGS</div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Detection Speed</div><div class="setting-desc">Lower = smoother, Higher = faster</div></div>
+          <select id="detectionSpeed" class="select-input">
+            <option value="128">Fast (low quality)</option>
+            <option value="224">Balanced</option>
+            <option value="320" selected>Accurate</option>
+            <option value="416">High accuracy</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Show Landmarks</div><div class="setting-desc">Display 68 facial points</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="showLandmarks" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Show Bounding Box</div><div class="setting-desc">Face detection rectangle</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="showBBox" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Multi-Face Mode</div><div class="setting-desc">Track multiple people</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="multiFaceMode"><span class="toggle-track"></span></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-label">BREATHING GUIDE</div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Auto-Trigger</div><div class="setting-desc">Show guide when stressed</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="breathingAutoToggle" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Trigger Threshold</div><div class="setting-desc">Stress level to show guide</div></div>
+          <div class="slider-wrap">
+            <input type="range" id="breatheThreshold" min="40" max="90" value="70" class="slider">
+            <span id="breatheThreshDisplay">70</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-label">APPEARANCE</div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Accent Color</div><div class="setting-desc">UI highlight color</div></div>
+          <div class="color-swatches">
+            <div class="swatch active" data-color="#00e5ff" style="background:#00e5ff"></div>
+            <div class="swatch" data-color="#00ff88" style="background:#00ff88"></div>
+            <div class="swatch" data-color="#ff9500" style="background:#ff9500"></div>
+            <div class="swatch" data-color="#bf5fff" style="background:#bf5fff"></div>
+            <div class="swatch" data-color="#ff3b8a" style="background:#ff3b8a"></div>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-name">Scanline Effect</div><div class="setting-desc">Retro CRT overlay</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="scanlineToggle" checked><span class="toggle-track"></span></label>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span>NeuroCal v2.0 — Facial AI Stress Detection</span>
+    <span id="footerMid">Ready</span>
+    <span>⚠ Wellness tool only — not a medical device</span>
+  </footer>
+
+</div><!-- /app-wrapper -->
+
+<!-- Audio context elements -->
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
